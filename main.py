@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from Config.db import BASE, engine
 from Middleware.get_json import JSONMiddleware
 from Router.Auth import auth_router
@@ -15,6 +16,13 @@ route = Path.cwd()
 app = FastAPI()
 app.title = "Avántika Cartera WhatsApp"
 app.version = "0.0.1"
+
+# Middleware para saltar la pantalla de advertencia de ngrok en desarrollo
+@app.middleware("http")
+async def add_ngrok_skip_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["ngrok-skip-browser-warning"] = "true"
+    return response
 
 # Servir PDFs generados como archivos estáticos
 app.mount("/Uploads", StaticFiles(directory=f"{route}/Uploads"), name="Uploads")
