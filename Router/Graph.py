@@ -1,0 +1,225 @@
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
+from Class.Graph import Graph
+from Utils.decorator import http_decorator
+from Config.db import get_db
+
+graph_router = APIRouter()
+
+@graph_router.post('/obtener_correos', tags=["TIC"], response_model=dict)
+@http_decorator
+def obtener_correos(request: Request, db: Session = Depends(get_db)):
+    """
+    Sincroniza correos de Microsoft Graph y los retorna desde BD
+    Implementa sincronización inteligente (solo nuevos correos)
+    """
+    data = getattr(request.state, "json_data", {})
+    forzar_sync = data.get('forzar_sync', False)
+    response = Graph(db).obtener_correos(forzar_sync)
+    return response
+
+@graph_router.post('/obtener_correos_bd', tags=["TIC"], response_model=dict)
+@http_decorator
+def obtener_correos_bd(request: Request, db: Session = Depends(get_db)):
+    """
+    Obtiene correos únicamente desde la base de datos (sin sincronizar).
+    Body: { limite: int, offset: int, estado: str }
+    """
+    data   = getattr(request.state, "json_data", {})
+    limite = int(data.get("limite", 100))
+    offset = int(data.get("offset", 0))
+    estado = data.get("estado", None)
+    response = Graph(db).obtener_correos_bd_solo(limite, offset, estado)
+    return response
+
+@graph_router.post('/sincronizar_correos', tags=["TIC"], response_model=dict)
+@http_decorator
+def sincronizar_correos(request: Request, db: Session = Depends(get_db)):
+    """
+    Fuerza una sincronización completa de correos desde Microsoft Graph
+    """
+    response = Graph(db).obtener_correos(forzar_sync=True)
+    return response
+
+@graph_router.post('/marcar_correo_procesado', tags=["TIC"], response_model=dict)
+@http_decorator
+def marcar_correo_procesado(request: Request, db: Session = Depends(get_db)):
+    """
+    Marca un correo como procesado o cambia su estado
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).marcar_correo_procesado(data)
+    return response
+
+@graph_router.post('/descartar_correo', tags=["TIC"], response_model=dict)
+@http_decorator
+def descartar_correo(request: Request, db: Session = Depends(get_db)):
+    """
+    Descarta un correo marcándolo con activo 0 para que no aparezca en la bandeja
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).descartar_correo(data)
+    return response
+
+@graph_router.post('/convertir_correo_ticket', tags=["TIC"], response_model=dict)
+@http_decorator
+def convertir_correo_ticket(request: Request, db: Session = Depends(get_db)):
+    """
+    Convierte un correo a ticket marcándolo con ticket = 1
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).convertir_correo_ticket(data)
+    return response
+
+@graph_router.post('/obtener_tickets_correos', tags=["TIC"], response_model=dict)
+@http_decorator
+def obtener_tickets_correos(request: Request, db: Session = Depends(get_db)):
+    """
+    Obtiene correos convertidos en tickets con filtrado optimizado por vista
+    Incluye información del estado (id y nombre)
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).obtener_tickets_correos(data)
+    return response
+
+@graph_router.post('/obtener_estados_tickets', tags=["TIC"], response_model=dict)
+def obtener_estados_tickets(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los estados de tickets disponibles
+    """
+    response = Graph(db).obtener_estados_tickets()
+    return response
+
+@graph_router.post('/obtener_tecnicos_gestion_tic', tags=["TIC"], response_model=dict)
+def obtener_tecnicos_gestion_tic(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los técnicos de gestión TIC disponibles
+    """
+    response = Graph(db).obtener_tecnicos_gestion_tic()
+    return response
+
+@graph_router.post('/obtener_attachments', tags=["TIC"], response_model=dict)
+@http_decorator
+def obtener_attachments(request: Request, db: Session = Depends(get_db)):
+    """
+    Obtiene los attachments de un correo específico
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).obtener_attachments(data)
+    return response
+
+@graph_router.post('/obtener_prioridades', tags=["TIC"], response_model=dict)
+def obtener_prioridades(db: Session = Depends(get_db)):
+    """
+    Obtiene todas las prioridades disponibles
+    """
+    response = Graph(db).obtener_prioridades()
+    return response
+
+@graph_router.post('/obtener_tipo_soporte', tags=["TIC"], response_model=dict)
+def obtener_tipo_soporte(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los tipos de soporte disponibles
+    """
+    response = Graph(db).obtener_tipo_soporte()
+    return response
+
+@graph_router.post('/obtener_tipo_ticket', tags=["TIC"], response_model=dict)
+def obtener_tipo_ticket(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los tipos de ticket disponibles
+    """
+    response = Graph(db).obtener_tipo_ticket()
+    return response
+
+@graph_router.post('/obtener_macroprocesos', tags=["TIC"], response_model=dict)
+def obtener_macroprocesos(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los macroprocesos disponibles
+    """
+    response = Graph(db).obtener_macroprocesos()
+    return response
+
+@graph_router.post('/filtrar_tickets', tags=["TIC"], response_model=dict)
+@http_decorator
+def filtrar_tickets(request: Request, db: Session = Depends(get_db)):
+    """
+    Filtra tickets con parámetros específicos usando los campos reales de la tabla
+    Frontend envía: q (texto), fEstado, fAsignado, fTipoSoporte, fMacro, fTipoTicket (IDs)
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).filtrar_tickets(data)
+    return response
+
+@graph_router.post('/actualizar_ticket', tags=["TIC"], response_model=dict)
+@http_decorator
+def actualizar_ticket(request: Request, db: Session = Depends(get_db)):
+    """
+    Actualiza campos específicos de un ticket en la tabla intranet_correos_microsoft
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).actualizar_ticket(data)
+    return response
+
+@graph_router.post('/responder_correo', tags=["TIC"], response_model=dict)
+@http_decorator
+def responder_correo(request: Request, db: Session = Depends(get_db)):
+    """
+    Responde a un correo específico usando Microsoft Graph API
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).responder_correo(data)
+    return response
+
+@graph_router.post('/obtener_hilo_conversacion', tags=["TIC"], response_model=dict)
+@http_decorator
+def obtener_hilo_conversacion(request: Request, db: Session = Depends(get_db)):
+    """
+    Obtiene el hilo completo de una conversación de correo
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).obtener_hilo_conversacion(data)
+    return response
+
+@graph_router.post('/enviar_respuesta_automatica_ticket', tags=["TIC"], response_model=dict)
+@http_decorator
+def enviar_respuesta_automatica_ticket(request: Request, db: Session = Depends(get_db)):
+    """
+    Envía respuesta automática al solicitante cuando se convierte un correo a ticket.
+    Esta respuesta es independiente del sistema de hilos de conversación.
+    """
+    data = getattr(request.state, "json_data", {})
+    message_id = data.get('message_id')
+    ticket_id = data.get('ticket_id')
+    
+    if not message_id or not ticket_id:
+        return {
+            "status": 400,
+            "message": "Se requieren message_id y ticket_id",
+            "data": {}
+        }
+    
+    response = Graph(db).enviar_respuesta_automatica_ticket(message_id, ticket_id)
+    return response
+
+@graph_router.post('/enviar_respuesta_automatica_optimizada', tags=["TIC"], response_model=dict)
+@http_decorator
+def enviar_respuesta_automatica_optimizada(request: Request, db: Session = Depends(get_db)):
+    """
+    Envía respuesta automática optimizada usando datos del correo desde frontend.
+    Más eficiente porque evita consulta adicional a Microsoft Graph.
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).enviar_respuesta_automatica_optimizada(data)
+    return response
+
+@graph_router.post('/enviar_correo_nuevo_automatico', tags=["TIC"], response_model=dict)
+@http_decorator
+def enviar_correo_nuevo_automatico(request: Request, db: Session = Depends(get_db)):
+    """
+    Envía un correo nuevo automático en lugar de responder al correo existente.
+    Alternativa cuando el message_id del correo original es problemático.
+    """
+    data = getattr(request.state, "json_data", {})
+    response = Graph(db).enviar_correo_nuevo_automatico(data)
+    return response
