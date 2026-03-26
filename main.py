@@ -18,18 +18,20 @@ app.title = "Avántika Cartera WhatsApp"
 app.version = "0.0.1"
 
 # Middleware para saltar la pantalla de advertencia de ngrok en desarrollo
-@app.middleware("http")
-async def add_ngrok_skip_header(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["ngrok-skip-browser-warning"] = "true"
-    return response
+# @app.middleware("http")
+# async def add_ngrok_skip_header(request: Request, call_next):
+#     response = await call_next(request)
+#     response.headers["ngrok-skip-browser-warning"] = "true"
+#     return response
 
 # Servir PDFs generados como archivos estáticos
 app.mount("/Uploads", StaticFiles(directory=f"{route}/Uploads"), name="Uploads")
 
 app.add_middleware(JSONMiddleware)
 app.add_middleware(
-    CORSMiddleware,allow_origins=["*"],  # Permitir todos los orígenes; para producción, especifica los orígenes permitidos.
+    CORSMiddleware,
+    # allow_origins=["*"],  # Permitir todos los orígenes; para producción, especifica los orígenes permitidos.
+    allow_origins=["https://whatsapp-cartera.avantika.com.co"],
     allow_credentials=True,
     allow_methods=["*"],  # Permitir todos los métodos; puedes especificar los métodos permitidos.
     allow_headers=["*"],  # Permitir todos los encabezados; puedes especificar los encabezados permitidos.
@@ -49,5 +51,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8017,
-        reload=True
+        # reload=True,  # Solo para desarrollo; no usar en producción
     )
